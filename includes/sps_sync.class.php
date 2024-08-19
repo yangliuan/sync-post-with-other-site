@@ -21,9 +21,13 @@ if( !class_exists ( 'SPS_Sync' ) ) {
 
 
         function rest_api_init_func() {
+            
             register_rest_route( 'sps/v1', '/data', array(
                 'methods'  => 'POST',
                 'callback' => array( $this, 'sps_get_request'  ),
+                'permission_callback' => function () {
+					return current_user_can( 'edit_posts' );
+				}
             ) );
         }
 
@@ -35,15 +39,17 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                     $post_old_title = $old_data[0]->post_title; 
                 } 
             }
-
+            error_log('filter_post_data');
             return $data;
         }
 
         function sps_rest_insert_post( $post, $reqest, $creating ) {
             $json = $reqest->get_json_params();
+            error_log(print_r($json, true));
             if ( isset( $json['tags'] ) && !empty( $json['tags'] ) ) {
                 $this->sps_save_post( $post->ID, $post, 1, $json['tags'] );
             }
+            error_log('sps_rest_insert_post');
         }
 
         function sps_send_data_to( $action, $args = array(), $sps_website = array() ) {
@@ -76,13 +82,17 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                     }
                 }
             }
+            error_log('sps_send_data_to');
         }
 
         function sps_remote_post( $action, $args = array() ) {
             do_action( 'spsp_before_send_data', $args );
             $args['sps_action'] = $action;
             $url = $args['sps']['host_name']."/wp-json/sps/v1/data"; 
+            //error_log(print_r($args, true));
             $return = wp_remote_post( $url, array( 'body' => $args ));
+            //error_log(print_r($return, true));
+            error_log('sps_remote_post');
             return $return;
         }
 
@@ -138,6 +148,7 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                     }
                 }
             }
+            error_log('sps_save_post');
         }
 
         function sps_check_data( $content_mach, $post_data ) {
@@ -188,14 +199,14 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                     }
                 }
             }
-
+            error_log('sps_check_data');
             return $post_id;
         }
 
         function grab_image($url,$saveto){
 
             $data = wp_remote_request( $url );
-            
+            //error_log(print_r($data,true));
             if( isset( $data['body'] ) && isset( $data['response']['code'] ) && !empty( $data['response']['code'] ) ) {
                 $raw = $data['body'];
                 if(file_exists($saveto)){
@@ -205,6 +216,7 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                 fwrite($fp, $raw);
                 fclose($fp);
             }
+            error_log('grab_image');
         }
 
         function sps_custom_wpkses_post_tags( $tags, $context ) {
@@ -224,7 +236,7 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                     'width'  => true,
                 );
             }
-
+            error_log('sps_custom_wpkses_post_tags');
             return $tags;
         }
 
@@ -356,12 +368,14 @@ if( !class_exists ( 'SPS_Sync' ) ) {
             $return['msg'] = __('Data proccessed successfully', SPS_txt_domain);
             $return['post_id'] = $post_id;
             $return['post_action'] = $post_action;
+            error_log('sps_add_update_post');
             return $return;
         }
 
         function sps_get_request( $request ) {
-
             $sps_sync_data = $request->get_params();
+            //error_log('sps_get_request 参数 $sps_sync_data');
+            //error_log(print_r($sps_sync_data,true));
             if( isset($sps_sync_data['sps_action']) && !empty($sps_sync_data['sps_action']) ) {
                 $this->is_website_post = false;
                 
@@ -406,7 +420,7 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                     $return['status'] = __('failed', SPS_txt_domain);
                     $return['msg'] = __('Username or Password is null.', SPS_txt_domain);
                 }
-                
+                error_log('sps_get_request');
                 return new WP_REST_Response( $return, 200 );
             }
         }
@@ -479,6 +493,7 @@ if( !class_exists ( 'SPS_Sync' ) ) {
                 
                 wp_update_post( array( 'ID' => $post_id, 'post_content' => $post_content ) );
             }
+            error_log('spsp_grab_content_images');
         }
     }
 
